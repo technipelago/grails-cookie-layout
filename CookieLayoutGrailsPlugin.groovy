@@ -20,7 +20,7 @@ import org.codehaus.groovy.grails.web.context.GrailsConfigUtils
 import org.codehaus.groovy.grails.web.pages.GroovyPagesTemplateEngine
 
 class CookieLayoutGrailsPlugin {
-    def version = "0.5-SNAPSHOT"
+    def version = "0.5"
     def grailsVersion = "2.0 > *"
     def pluginExcludes = [
             "grails-app/views/error.gsp"
