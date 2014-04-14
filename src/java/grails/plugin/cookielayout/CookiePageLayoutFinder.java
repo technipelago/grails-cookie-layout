@@ -70,6 +70,7 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
     private boolean enableNonGspViews = false;
     private String cookieLayoutName;
     private String cookieLayoutAppend = null;
+    private boolean checkRequest = false;
 
     @Override
     public void setDefaultDecoratorName(String defaultDecoratorName) {
@@ -103,6 +104,8 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
     public void setCookieLayoutAppend(String append) {
         this.cookieLayoutAppend = append;
     }
+
+    public void setCheckRequest(boolean arg) { this.checkRequest = arg; }
 
     @Override
     public Decorator findLayout(HttpServletRequest request, Content page) {
@@ -266,6 +269,12 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
     }
 
     private String getLayoutFromCookie(HttpServletRequest request, String cookieName) {
+        if(checkRequest) {
+            final Object requestLayout = request.getAttribute(cookieName);
+            if(requestLayout != null) {
+                return requestLayout.toString();
+            }
+        }
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie c : cookies) {
