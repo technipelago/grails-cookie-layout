@@ -20,7 +20,7 @@ import org.codehaus.groovy.grails.web.context.GrailsConfigUtils
 import org.codehaus.groovy.grails.web.pages.GroovyPagesTemplateEngine
 
 class CookieLayoutGrailsPlugin {
-    def version = "0.5"
+    def version = "0.6"
     def grailsVersion = "2.0 > *"
     def pluginExcludes = [
             "grails-app/views/error.gsp"
@@ -54,6 +54,7 @@ This can be used to support different themes for different users.
             viewResolver = ref('jspViewResolver')
             cookieLayoutName = config['grails.layout.cookie.name'] ?: "grails_layout"
             cookieLayoutAppend = config['grails.layout.cookie.append'] ?: null
+            checkRequest = config['grails.layout.cookie.request'] ?: false
         }
     }
 }
