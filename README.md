@@ -36,3 +36,8 @@ If layout `main` is specified in the GSP and `grails.layout.cookie.append` is `n
 then Grails will look for a layout named `foo.gsp`.
 
     grails.layout.cookie.append = null
+
+### Changes
+
+* Version 0.7 supports Grails 2.4.x
+* Version 0.6 supports Grails 2.2.x

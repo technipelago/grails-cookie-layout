@@ -20,7 +20,7 @@ import org.codehaus.groovy.grails.web.context.GrailsConfigUtils
 import org.codehaus.groovy.grails.web.pages.GroovyPagesTemplateEngine
 
 class CookieLayoutGrailsPlugin {
-    def version = "0.6"
+    def version = "0.7"
     def grailsVersion = "2.0 > *"
     def pluginExcludes = [
             "grails-app/views/error.gsp"
@@ -30,8 +30,8 @@ class CookieLayoutGrailsPlugin {
     def author = "Goran Ehrsson"
     def authorEmail = "goran@technipelago.se"
     def description = '''\
-Sitemesh layout can be selected by looking at the value of a cookie.
-This can be used to support different themes for different users.
+Sitemesh layout can be selected by looking at the current domain name or the value of a cookie.
+This can be used to support different themes for different users running the same application.
 '''
     def documentation = "https://github.com/technipelago/grails-cookie-layout"
     def license = "APACHE"

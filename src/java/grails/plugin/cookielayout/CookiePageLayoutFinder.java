@@ -25,19 +25,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.codehaus.groovy.grails.commons.GrailsClassUtils;
+import org.codehaus.groovy.grails.commons.GrailsStringUtils;
 import org.codehaus.groovy.grails.io.support.GrailsResourceUtils;
 import org.codehaus.groovy.grails.web.metaclass.ControllerDynamicMethods;
 import org.codehaus.groovy.grails.web.servlet.GrailsApplicationAttributes;
-import org.codehaus.groovy.grails.web.servlet.view.GroovyPageView;
+import org.codehaus.groovy.grails.web.servlet.view.AbstractGrailsView;
+import org.codehaus.groovy.grails.web.servlet.view.GrailsViewResolver;
+import org.codehaus.groovy.grails.web.servlet.view.LayoutViewResolver;
 import org.codehaus.groovy.grails.web.sitemesh.GSPSitemeshPage;
 import org.codehaus.groovy.grails.web.sitemesh.GroovyPageLayoutFinder;
 import org.codehaus.groovy.grails.web.sitemesh.SpringMVCViewDecorator;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
 
@@ -72,31 +74,29 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
     private String cookieLayoutAppend = null;
     private boolean checkRequest = false;
 
-    @Override
     public void setDefaultDecoratorName(String defaultDecoratorName) {
         this.defaultDecoratorName = defaultDecoratorName;
     }
 
-    @Override
     public void setEnableNonGspViews(boolean enableNonGspViews) {
         this.enableNonGspViews = enableNonGspViews;
     }
 
-    @Override
     public void setGspReloadEnabled(boolean gspReloadEnabled) {
         this.gspReloadEnabled = gspReloadEnabled;
     }
 
-    @Override
     public void setCacheEnabled(boolean cacheEnabled) {
         this.cacheEnabled = cacheEnabled;
     }
 
-    @Override
     public void setViewResolver(ViewResolver viewResolver) {
-        this.viewResolver = viewResolver;
+        if(viewResolver instanceof LayoutViewResolver) {
+            this.viewResolver = ((LayoutViewResolver)viewResolver).getInnerViewResolver();
+        } else {
+            this.viewResolver = viewResolver;
+        }
     }
-
     public void setCookieLayoutName(String cookieName) {
         this.cookieLayoutName = cookieName;
     }
@@ -107,12 +107,10 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
 
     public void setCheckRequest(boolean arg) { this.checkRequest = arg; }
 
-    @Override
     public Decorator findLayout(HttpServletRequest request, Content page) {
         return findLayout(request, GSPSitemeshPage.content2htmlPage(page));
     }
 
-    @Override
     public Decorator findLayout(HttpServletRequest request, Page page) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Evaluating layout for request: " + request.getRequestURI());
@@ -129,7 +127,7 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
              * The following block is the main change applied to original GroovyPageLayoutFinder
              */
             String cookieLayout = getLayoutFromCookie(request, cookieLayoutName);
-            if (!StringUtils.isBlank(cookieLayout)) {
+            if (!GrailsStringUtils.isBlank(cookieLayout)) {
                 if (cookieLayoutAppend != null) {
                     layoutName = layoutName + cookieLayoutAppend + cookieLayout;
                 } else {
@@ -142,11 +140,11 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
 
             Decorator d = null;
 
-            if (StringUtils.isBlank(layoutName)) {
-                GroovyObject controller = (GroovyObject) request.getAttribute(GrailsApplicationAttributes.CONTROLLER);
+            if (GrailsStringUtils.isBlank(layoutName)) {
+                GroovyObject controller = (GroovyObject)request.getAttribute(GrailsApplicationAttributes.CONTROLLER);
                 if (controller != null) {
-                    String controllerName = (String) controller.getProperty(ControllerDynamicMethods.CONTROLLER_NAME_PROPERTY);
-                    String actionUri = (String) controller.getProperty(ControllerDynamicMethods.ACTION_URI_PROPERTY);
+                    String controllerName = (String)controller.getProperty(ControllerDynamicMethods.CONTROLLER_NAME_PROPERTY);
+                    String actionUri = (String)controller.getProperty(ControllerDynamicMethods.ACTION_URI_PROPERTY);
 
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Found controller in request, location layout for controller [" + controllerName
@@ -173,10 +171,12 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
                             layoutDecoratorCache.put(cacheKey, new DecoratorCacheValue(d));
                         }
                     }
-                } else {
+                }
+                else {
                     d = getApplicationDefaultDecorator(request);
                 }
-            } else {
+            }
+            else {
                 d = getNamedDecorator(request, layoutName);
             }
 
@@ -187,20 +187,17 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
         return null;
     }
 
-    @Override
     protected Decorator getApplicationDefaultDecorator(HttpServletRequest request) {
         return getNamedDecorator(request, defaultDecoratorName == null ? "application" : defaultDecoratorName,
                 !enableNonGspViews || defaultDecoratorName == null);
     }
 
-    @Override
     public Decorator getNamedDecorator(HttpServletRequest request, String name) {
         return getNamedDecorator(request, name, !enableNonGspViews);
     }
 
-    @Override
     public Decorator getNamedDecorator(HttpServletRequest request, String name, boolean viewMustExist) {
-        if (StringUtils.isBlank(name) || NONE_LAYOUT.equals(name)) {
+        if (GrailsStringUtils.isBlank(name) || NONE_LAYOUT.equals(name)) {
             return null;
         }
 
@@ -216,10 +213,11 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
             view = viewResolver.resolveViewName(GrailsResourceUtils.appendPiecesForUri(LAYOUTS_PATH, name),
                     request.getLocale());
             // it's only possible to check that GroovyPageView exists
-            if (viewMustExist && !(view instanceof GroovyPageView)) {
+            if (viewMustExist && !(view instanceof AbstractGrailsView)) {
                 view = null;
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new RuntimeException("Unable to resolve view", e);
         }
 
@@ -235,7 +233,7 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
     }
 
     private Decorator resolveDecorator(HttpServletRequest request, GroovyObject controller, String controllerName,
-                                       String actionUri) {
+            String actionUri) {
         Decorator d = null;
 
         Object layoutProperty = GrailsClassUtils.getStaticPropertyValue(controller.getClass(), "layout");
@@ -244,12 +242,13 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
                 LOG.debug("layout property found in controller, looking for template named " + layoutProperty);
             }
             d = getNamedDecorator(request, layoutProperty.toString());
-        } else {
-            if (d == null && !StringUtils.isBlank(actionUri)) {
+        }
+        else {
+            if (d == null && !GrailsStringUtils.isBlank(actionUri)) {
                 d = getNamedDecorator(request, actionUri.substring(1), true);
             }
 
-            if (d == null && !StringUtils.isBlank(controllerName)) {
+            if (d == null && !GrailsStringUtils.isBlank(controllerName)) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Action layout not found, trying controller");
                 }
@@ -298,22 +297,25 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
         }
 
         @Override
-        public int hashCode() {
-            return new HashCodeBuilder().append(themeName).append(actionUri).append(controllerName).toHashCode();
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            LayoutCacheKey that = (LayoutCacheKey) o;
+
+            if (!actionUri.equals(that.actionUri)) return false;
+            if (!controllerName.equals(that.controllerName)) return false;
+            if (!themeName.equals(that.themeName)) return false;
+
+            return true;
         }
 
         @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null) return false;
-            if (getClass() != obj.getClass()) return false;
-
-            LayoutCacheKey other = (LayoutCacheKey) obj;
-            return new EqualsBuilder()
-                    .append(other.themeName, themeName)
-                    .append(other.actionUri, actionUri)
-                    .append(other.controllerName, controllerName)
-                    .isEquals();
+        public int hashCode() {
+            int result = controllerName.hashCode();
+            result = 31 * result + actionUri.hashCode();
+            result = 31 * result + themeName.hashCode();
+            return result;
         }
     }
 
@@ -334,4 +336,11 @@ public class CookiePageLayoutFinder extends GroovyPageLayoutFinder {
         }
     }
 
+    @Override
+    public void onApplicationEvent(ContextRefreshedEvent event) {
+        if (!(viewResolver instanceof GrailsViewResolver)) {
+            setViewResolver(event.getApplicationContext().getBean(GrailsViewResolver.class));
+        }
+
+    }
 }
